@@ -1,52 +1,75 @@
+#include <stdlib.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include "game.h"
+#include "log.h"
+#include "globals.h"
+#include "state.h"
+#include <ctime>
+
+
+SDL_Event e;
+
+static void main_loop(void* args) {
+    if (current_state == ExitState::get()) {
+        #ifdef __EMSCRIPTEN__
+        emscripten_cancel_main_loop();
+        #endif
+        return;
+    }
+
+    while (SDL_PollEvent(&e))
+    {
+        current_state->handle_event(e);
+        if (e.type == SDL_QUIT) {
+            set_next_state(ExitState::get());
+        }
+
+    }
+    current_state->update();
+    change_state();
+    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+    SDL_RenderClear(renderer);
+
+    current_state->render();
+
+    SDL_RenderPresent(renderer);
+}
+
 
 int main(int argc, char *args[])
 {
-    Game game = Game();
-    if (!game.init())
+    log_init("log.txt");
+    if (!init())
     {
-        printf("Failed to initialize!");
+        log_print("Failed to initialize!\n");
     }
     else
     {
-        if (!game.load_media())
+        if (!load_media())
         {
-            printf("Failed to load media!\n");
+            log_print("Failed to load media!\n");
         }
         else
         {
             // Randomize seed
             srand(time(0));
 
-            // Quit flag
-            bool quit = false;
-
-            // Event to handle
-            SDL_Event e;
-
             timer.start();
-            
-
-            while (!quit)
+            #ifdef __EMSCRIPTEN__
+            emscripten_set_main_loop_arg(main_loop, NULL, 0, 1);
+            #else
+            current_state = IntroState::get();
+            current_state->enter();
+            while (current_state != ExitState::get())
             {
-                // Handles input
-                while (SDL_PollEvent(&e))
-                {
-                    if (e.type == SDL_QUIT) {
-                        quit = true;
-                    }
-                    game.handle_event(&e);
-                }
-
-                game.draw();
-                if (!end && !paused) {
-                    game.update();
-                }
-
-
+                main_loop(NULL);   
             }
-            game.close();
+            #endif
         }
     }
-    return 0;
+    log_close();
+    close();
+    return EXIT_SUCCESS;
 }

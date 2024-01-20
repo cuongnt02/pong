@@ -1,5 +1,8 @@
 #include "texture.h"
+#include "SDL_image.h"
+#include "SDL_ttf.h"
 #include "share.h"
+#include "globals.h"
 
 Texture::Texture()
 {
@@ -27,30 +30,21 @@ bool Texture::load_from_file(std::string path)
 {
     free();
     SDL_Texture* new_texture = NULL;
-    SDL_Surface* loaded_surface = IMG_Load(path.c_str());
 
-    if (loaded_surface == NULL)
+    new_texture = IMG_LoadTexture(renderer, path.c_str());
+    if (new_texture == NULL)
     {
-        printf("Could not load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
+        printf("Could not create texture %s! SDL_Error: %s\n", path.c_str(), SDL_GetError());
     }
     else
     {
-        new_texture = SDL_CreateTextureFromSurface(renderer, loaded_surface);
-        if (new_texture == NULL)
-        {
-            printf("Could not create texture %s! SDL_Error: %s\n", path.c_str(), SDL_GetError());
-        }
-        else
-        {
-            m_width = loaded_surface->w;
-            m_height = loaded_surface->h;
-        }
-        SDL_FreeSurface(loaded_surface);
-        
+        // Query size of texture
+        SDL_QueryTexture(new_texture, NULL, NULL, &m_width, &m_height);
     }
 
     m_texture = new_texture;
     return m_texture != NULL;
+    
 
 }
 
@@ -97,11 +91,18 @@ bool Texture::load_from_redered_text(std::string text, SDL_Color text_color) {
         else {
             m_width = text_surface->w;
             m_height = text_surface->h;
+            TTF_SetFontSize(font, DEFAULT_FONT_SIZE);
         }
 
         SDL_FreeSurface(text_surface);
     }
 
 
+
     return m_texture != NULL;
 }
+
+void Texture::TXT_set_font_size(int font_size) {
+    TTF_SetFontSize(font, font_size);
+}
+

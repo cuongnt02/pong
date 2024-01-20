@@ -2,7 +2,6 @@
 class Timer {
     public:
         Timer();
-
         void start();
         void stop();
         void pause();
